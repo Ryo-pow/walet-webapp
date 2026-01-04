@@ -1,0 +1,21 @@
+# --- OS特有のゴミファイル ---
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# --- エディタ関連 ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- 環境変数 ---
+.env
+.env.local
+.env.*.local
+
+# --- ログと一時ファイル ---
+*.log
+/log/*
+/tmp/*
