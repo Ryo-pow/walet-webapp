@@ -1,15 +1,28 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 import httpx
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from . import models, database
+from .database import engine
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Order Service")
+
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 class orderRequest(BaseModel):
     user_id : int
     amount : float = Field(gt=0, description="The amount must be greater than zero")
     
 @app.post("/orders")
-async def create_order(order: orderRequest):
+async def create_order(order: orderRequest, db: Session = Depends(get_db)):
     rails_base_url = "http://127.0.0.1:3000"
     withdraw_url = f"{rails_base_url}/api/v1/wallets/{order.user_id}/withdraw"
 
@@ -22,6 +35,16 @@ async def create_order(order: orderRequest):
             )
 
             if response.status_code == 200:
+                new_order = models.Order(
+                    user_id = order.user_id,
+                    amount = order.amount,
+                    status = "success"
+                )
+
+                db.add(new_order)
+                db.commit()
+                db.refresh(new_order)
+
                 result = response.json()
                 return {
                     "message": "Order created and payment successful",
