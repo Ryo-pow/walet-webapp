@@ -1,0 +1,10 @@
+# 実行ファイル
+price_service
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# ログファイル
+*.log
