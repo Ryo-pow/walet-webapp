@@ -76,9 +76,11 @@ def read_root():
     return {"status": "Order Server is running"}
 
 @app.get("/orders")
-def get_orders(db: Session= Depends(get_db)):
-    orders = db.query(models.Order).all()
-    return orders
+def get_orders(user_id: int | None,db: Session= Depends(get_db)):
+    query = db.query(models.Order)
+    if user_id:
+        query = query.filter(models.Order.user_id == user_id)
+    return query.all()
 
 @app.get("/orders/{order_id}")
 def get_order(order_id: int, db: Session = Depends(get_db)):
