@@ -67,3 +67,9 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
 @app.get("/")
 def read_root():
     return {"status": "Order Server is running"}
+
+@app.get("/orders")
+def get_orders(db: Session= Depends(get_db)):
+    orders = db.query(models.Order).all()
+    return orders
+
