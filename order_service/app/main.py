@@ -10,6 +10,13 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Order Service")
 
+async def get_latest_price():
+    url = "http://localhost:8080/price"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        data = response.json()
+        return data["price"]
+
 def get_db():
     db = database.SessionLocal()
     try:
@@ -23,6 +30,9 @@ class orderRequest(BaseModel):
     
 @app.post("/orders")
 async def create_order(order: orderRequest, db: Session = Depends(get_db)):
+    market_price = await get_latest_price()
+    total_cost = order.amount * market_price
+
     rails_base_url = "http://127.0.0.1:3000"
     withdraw_url = f"{rails_base_url}/api/v1/wallets/{order.user_id}/withdraw"
 
@@ -30,7 +40,7 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
         try:
             response = await client.post(
                 withdraw_url,
-                json={"amount": order.amount},
+                json={"amount": total_cost},
                 timeout=5.0
             )
 
