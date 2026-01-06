@@ -53,6 +53,13 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
             
             elif response.status_code == 400:
                 error_msg = response.json().get("message", "Payment failed")
+                failed_order = models.Order(
+                    user_id = order.user_id,
+                    amount = order.amount,
+                    status = "failed"
+                )
+                db.add(failed_order)
+                db.commit()
                 raise HTTPException(status_code=400, detail=error_msg)
             
             else:
@@ -73,3 +80,9 @@ def get_orders(db: Session= Depends(get_db)):
     orders = db.query(models.Order).all()
     return orders
 
+@app.get("/orders/{order_id}")
+def get_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="注文が見つかりません")
+    return order
