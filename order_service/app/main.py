@@ -55,9 +55,20 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
                 db.commit()
                 db.refresh(new_order)
 
+                rust_url = "http://127.0.0.1:3001/match"
+                await client.post(rust_url, json={
+                    "id": new_order.id,
+                    "user_id": new_order.user_id,
+                    "price": market_price,
+                    "amount": order.amount,
+                    "side": "buy"
+                })
+
                 result = response.json()
                 return {
-                    "message": "Order created and payment successful",
+                    "message": "Order created and payment successful, and sent to Matching Engine",
+                    "order_id": new_order.id,
+                    "market_price": market_price,
                     "remaining_balance": result.get("balance")
                 }
             
