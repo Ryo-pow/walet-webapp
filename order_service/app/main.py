@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Depends
 import httpx
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+import redis
+import json
 
 from . import models, database
 from .database import engine
@@ -33,9 +35,9 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
     market_price = await get_latest_price()
     total_cost = order.amount * market_price
 
+    redis_client = redis.Redis(host='localhost', port=6379, db=0)
     rails_base_url = "http://127.0.0.1:3000"
     withdraw_url = f"{rails_base_url}/api/v1/wallets/{order.user_id}/withdraw"
-
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
@@ -55,15 +57,16 @@ async def create_order(order: orderRequest, db: Session = Depends(get_db)):
                 db.commit()
                 db.refresh(new_order)
 
-                rust_url = "http://127.0.0.1:3001/match"
-                await client.post(rust_url, json={
+                order_payload = {
                     "id": new_order.id,
                     "user_id": new_order.user_id,
                     "price": market_price,
                     "amount": order.amount,
                     "side": "buy"
-                })
+                }
 
+                redis_client.lpush("order_queue", json.dumps(order_payload))
+                print(f"Order{new_order.id} をRedisキューに投入しました")
                 result = response.json()
                 return {
                     "message": "Order created and payment successful, and sent to Matching Engine",
